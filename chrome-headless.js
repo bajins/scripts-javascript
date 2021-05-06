@@ -6,6 +6,7 @@
  * @Description: In User Settings Edit
  * @FilePath: index.js
  */
+// --remote-debugging-port=8000
 // npm install chrome-remote-interface
 // https://github.com/cyrus-and/chrome-remote-interface
 const CDP = require('chrome-remote-interface');
@@ -56,7 +57,7 @@ async function loadUrlGetHtml(url) {
             // console.log(params);
         });
         // 禁用缓存
-        await Network.setCacheDisabled({ cacheDisabled: true });
+        //await Network.setCacheDisabled({ cacheDisabled: true });
 
         // enable events then start!
         await Network.enable();
