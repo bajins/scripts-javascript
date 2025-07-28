@@ -1,0 +1,382 @@
+<!--
+ * @Author: https://www.bajins.com
+ * @Date: 2021-06-03 10:52:20
+ * @LastEditTime: 2021-06-03 16:15:51
+ * @LastEditors: Please set LastEditors
+ * @Description: In User Settings Edit
+ * @FilePath: \sheetjs\index.html
+-->
+<!DOCTYPE html>
+<html>
+<header>
+    <script src="./xlsx-populate.min.js"></script>
+    <script src="./xlsx.core.min.js"></script>
+    <script src="./xlsxStyle.core.min.js"></script>
+    <script src="./xlsxStyle.utils.js"></script>
+</header>
+
+<body>
+<button type="button" style="margin-left: 20px" onclick="testXlsxPopulate()">导出Excel</button>
+<button type="button" style="margin-left: 20px" onclick="exportSheetJS()">导出Excel2</button>
+<br>
+<table id="print-content" border="1" cellpadding="0" cellspacing="0"
+       style='border-collapse:collapse;table-layout:fixed;'></table>
+<script>
+    function testXlsxPopulate() {
+        let titleArray = [{"组织编码": true}, {"检具型号编码": true}, {"检定类型": true}, {"项目编码": true}, {"检查方法": true}, {"标准": true}, {"耗时": true}, {"标准方法": true}, {"项目名称": true}, "备注", "test"]
+        let data = [
+            ["0001", "jianjuxinghao-bm-02-24-1", "内检", "jdxm-bm02-24-12", "指定值", "a", "1", "1", "项目名字a"],
+            ["0001", "jianjuxinghao-bm-02-24-1", "外检", "jdxm-bm02-24-12", "一般值", "b", "2", "1", "项目名字b"],
+            ["0001", "jianjuxinghao-bm-02-24-1", "外检", "jdxm-bm02-24-11", "指定值", "d", "4", "2", "项目名字d"],
+            ["0001", "jianju-xinghao2044", "外检", "jdxm-bm02-24-11", "指定值", "c", "3", "2", "项目名字c"]
+        ];
+        exportXlsxPopulate(titleArray, data, 'test.xlsx');
+    }
+
+    // Promise is not defined in IE so xlsx-populate uses a polyfill via JSZip.
+    // var Promise = XlsxPopulate.Promise;
+    /**
+     * 导出excel
+     */
+    exportXlsxPopulate = (titleArray, data, fileName) => {
+        return new Promise((resolve, reject) => {
+            XlsxPopulate.fromBlankAsync().then(workbook => { // 创建Excel
+                /**
+                 * 10进制转26进制
+                 *
+                 * @param num
+                 * @returns {string|string}
+                 */
+                function convertTo26(num) {
+                    if (num <= 0) {
+                        throw RangeError("值不能小于等于0");
+                    }
+                    if (num <= 26) {
+                        return String.fromCharCode(num + 64)
+                    } else {
+                        return convertTo26(~~((num - 1) / 26)) + convertTo26(num % 26 || 26);
+                    }
+                }
+
+                /**
+                 * 计算单元格宽度
+                 */
+                function getCellWidth(value) {
+                    // 判断是否为null或undefined
+                    if (value == null) {
+                        return 10;
+                    }
+                    value = value.toString();
+                    let len = value.length;
+                    if (/.*[\u4e00-\u9fa5]+.*$/.test(value)) {// 判断是否包含中文
+                        for (let i = len; i--;) {
+                            if (value.charCodeAt(i) > 255) { // ascii码应该在0-255之间
+                                len++;
+                            }
+                        }
+                    }
+                    // 另一种方案：将非ascii码转换为2个ascii码
+                    // len = value.replace(/[^\x00-\xff]/g, '**').length;
+                    // len = value.replace(/[\u0391-\uFFE5]/g, '**').length;
+                    return len * 1.4;
+                }
+
+                // 第一个sheet页
+                let wb = workbook.sheet("Sheet1");
+                let sheet = workbook.sheet(0);
+                for (let i = 0; i < titleArray.length; i++) {
+                    const title = titleArray[i];
+                    let key;
+                    let bold = false;
+                    if (typeof title == "string") {
+                        key = title;
+                    } else if (title instanceof Array) {
+                        key = title[0];
+                        if (title.length > 1) {
+                            bold = title[1];
+                        }
+                    } else if (title instanceof Object) {
+                        key = Object.keys(title)[0];
+                        bold = title[key];
+                    }
+                    let columnKey = convertTo26(i + 1);
+                    // 设置A列宽
+                    wb.column(columnKey).width(getCellWidth(key));
+                    // 表头
+                    wb.cell(columnKey + "1").value(key)
+                        .style("bold", bold) // 加粗
+                        .style("border", true) // 边框
+                        .style("wrapText", true) // 单元格格式
+                        // .style("numberFormat", "0.00") // 数字格式
+                        .style("verticalAlignment", "center")//水平居中
+                        .style("horizontalAlignment", "center");//垂直居中;
+                }
+                // 设置第一行高
+                // wb.row(1).height(50);
+
+                /*wb.range("A1:D2").merged(true) // 标题合并单元格  A列到D列,1行到2行合并
+                    .value("月考成绩\n2019年12月")
+                    .style("verticalAlignment", "center")//水平居中
+                    .style("horizontalAlignment", "center")//垂直居中
+                    .style("wrapText", true) //自动换行
+                    .style("border", true) // 边框
+                    .style("bold", true); // 加粗*/
+
+                // 数据
+                // 张三
+                // wb.cell("A2").value("组织编码").style("border", true) // 边框
+
+                /*const r = sheet.range("B3:D3");// range，在这个范围内设置
+                r.value(5);*/
+                /*sheet.cell("A7").value(1).style({
+                    leftBorder: "thick",
+                    rightBorder: "thick"
+                });*/
+                const r2 = sheet.range("A2:" + convertTo26(titleArray.length) + (data.length + 1));
+                r2.value(data).style("border", true);
+
+                // Write to file.
+                /*workbook.outputAsync().then(function (blob) {
+                    if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+                        // If IE, you must uses a different method.
+                        window.navigator.msSaveOrOpenBlob(blob, fileName);
+                    } else {
+                        let url = window.URL.createObjectURL(blob);
+                        let a = document.createElement('a');
+                        document.body.appendChild(a);
+                        a.href = url;
+                        a.download = fileName;
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    }
+                });*/
+                //处理完毕
+                return workbook.outputAsync({
+                    type: ""
+                });
+            }).then(function (blob) { // 下载Excel
+                if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+                    // If IE, you must uses a different method.
+                    window.navigator.msSaveOrOpenBlob(blob, fileName);
+                } else {
+                    let url = window.URL.createObjectURL(blob);
+                    let a = document.createElement('a');
+                    document.body.appendChild(a);
+                    a.href = url;
+                    a.download = fileName;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                }
+                resolve();
+            }).catch(function (err) { // 执行错误
+                /*console.log(err.message || err);
+                throw err;*/
+                reject(err);
+            });
+        });
+    };
+    // xlsx-populate解析excel
+    /*XlsxPopulate.fromFileAsync('./myFile.xlsx').then(workbook => {
+        var sheet = workbook.sheet(0);
+        var rows = sheet._rows;
+        let resultData = {
+            tableHead: [],
+            tableData: []
+        }
+        let tableId = []
+        rows.forEach(row => {
+            row._cells.forEach(cell => {
+                let col = cell.columnNumber();
+                let row = cell.rowNumber();
+                if (row == 1 && cell.value()) {
+                    let value = cell.value();
+                    resultData.tableHead.push(value);
+                }
+                let backgroundCR = cell.columnName() + row;
+                let background = workbook.sheet("Sheet1").cell(backgroundCR).style("fill");
+                let bg;
+                if (background) {
+                    bg = background.color != undefined ? '#' + workbook.sheet("Sheet1").cell(backgroundCR).style("fill").color.rgb.substring(2) : null;
+                } else {
+                    bg = null;
+                }
+                if (tableId.indexOf(row) == -1 && row != 1) {
+                    let resultDataItem = [{
+                        columnNumber: col,
+                        rowNumber: row,
+                        background: bg,
+                        value: cell.value() || "none"
+                    }]
+                    resultData.tableData.push(resultDataItem)
+                    tableId.push(row)
+                } else if (tableId.indexOf(row) != -1 && row != 1) {
+                    let resultDataItem = {
+                        columnNumber: col,
+                        rowNumber: row,
+                        background: bg,
+                        value: cell.value() || "none"
+                    }
+                    resultData.tableData[row - 2].push(resultDataItem);
+                }
+            })
+        })
+    }).catch(error => {
+        console.log(error);
+    });*/
+</script>
+<script>
+    // 数据
+    const data = {
+        "success": true,
+        "errorCode": "-1",
+        "msg": "导出成功",
+        "body": {
+            "title": "个人信息",
+            "excelData": [
+                ["序号", "姓名", "年龄", "性别", "手机", "邮箱", "金额", "创建日期"],
+                [1, "周一", 28, "男", "13888888881", "1@q.com", 4123.3, "2020-05-01"],
+                [2, "崔二", 25, "女", "13888888882", "2@q.com", 23432, "2020-05-03"],
+                [3, "张三", 15, "男", "13888888883", "3@q.com", 433.14, "2020-05-02"],
+                [4, "李四", 27, "男", "13888888884", "4@q.com", 6523, "2020-05-01"],
+                [5, "王五", 18, "男", "13888888885", "5@q.com", 411.36, "2020-05-04"],
+                [6, "赵六", 21, "男", "13888888886", "6@q.com", 1234, "2020-05-08"],
+                [7, "唐七", 22, "女", "13888888887", "7@q.com", 4321.75, "2020-05-05"],
+                [8, "范八", 19, "男", "13888888888", "8@q.com", 4322, "2020-05-06"],
+                [9, "薛九", 31, "女", "13888888889", "9@q.com", 56465, "2020-05-01"],
+                [10, "闫十", 45, "男", "13888888810", "10@q.com", 7864, "2020-05-07"]
+            ]
+        }
+    };
+
+    /**
+     * XLSX.utils.aoa_to_sheet //数组转换为worksheet
+     * XLSX.utils.json_to_sheet //json对象转换为worksheet
+     * XLSX.utils.table_to_sheet //表格转换为worksheet
+     * const workbook: XLSX.WorkBook = XLSX.utils.book_new();// 新建一个工作簿
+     * XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1'); //将工作表添加到工作簿
+     *
+     * https://www.npmjs.com/package/xlsx-style#cell-styles 样式
+     */
+    // 导出excel
+    function exportSheetJS() {
+        if (!data.success) {
+            return;
+        }
+        if (null == data.body) {
+            return;
+        }
+        const aoa = data.body.excelData;
+        // 插入头部
+        const header = [];
+        header.push(data.body.title);
+        let cols = aoa[0].length;
+        for (let i = 0; i < cols - 1; i++) {
+            header.push("");
+        }
+        aoa.unshift(header);
+
+        // 生成sheet
+        const sheet = XLSX.utils.aoa_to_sheet(aoa);
+        // 二进制文件
+        let sheetName = 'sheet1';
+        const workbook = {
+            SheetNames: [sheetName],
+            Sheets: {}
+        };
+        workbook.Sheets[sheetName] = sheet;
+        // 生成excel的配置项
+        const wopts = {
+            bookType: 'xlsx', // 要生成的文件类型
+            bookSST: false, // 是否生成Shared String Table，官方解释是，如果开启生成速度会下降，但在低版本IOS设备上有更好的兼容性
+            type: 'binary'
+        };
+
+        // 设置样式
+        cols = XSU.getMaxCol(workbook, sheetName);//当前最大列
+
+        //workbook样式处理，调用xlsxStyle.utils方法
+
+        //------------------通用表格样式----------------------------
+        XSU.mergeCells(workbook, sheetName, "A1", cols); //合并title单元格
+        XSU.setFontTypeAll(workbook, sheetName, 'Arial');//字体：Arial
+        XSU.setFontStylesAll(workbook, sheetName, {"bold": true}); // 字体样式
+        XSU.setFontSizeAll(workbook, sheetName, 10);//字体大小：10
+        XSU.setAlignmentHorizontalAll(workbook, sheetName, 'center');//垂直居中
+        XSU.setAlignmentVerticalAll(workbook, sheetName, 'center');//水平居中
+        XSU.setBorderDefaultAll(workbook, sheetName);//设置所有单元格默认边框
+        //-------------------------个性化----------------------------
+        //列宽设置 1wch为1英文字符宽度 (统一放大一下宽度)
+        XSU.setColWidthAll(workbook, sheetName, 15);
+
+        //设置A 行 主标题 默认样式 必须最后设置 否则可能会被其他覆盖
+        XSU.setTitleStylesDefault(workbook, sheetName);
+        //设置B 行 小标题 默认样式 必须最后设置 否则可能会被其他覆盖
+        XSU.setSecondRowStylesDefault(workbook, sheetName);
+
+
+        // 将一个sheet转成最终的excel文件的blob对象，然后利用URL.createObjectURL下载
+        const wbout = xlsxStyle.write(workbook, wopts);
+        let blob = new Blob([s2ab(wbout)], {type: "application/octet-stream"});
+
+        // 字符串转ArrayBuffer
+        function s2ab(s) {
+            const buf = new ArrayBuffer(s.length);
+            const view = new Uint8Array(buf);
+            for (let i = 0; i != s.length; ++i) {
+                view[i] = s.charCodeAt(i) & 0xFF;
+            }
+            return buf;
+        }
+
+        // 下载
+        if (typeof blob == 'object' && blob instanceof Blob) {
+            blob = URL.createObjectURL(blob); // 创建blob地址
+        }
+        const aLink = document.createElement('a');
+        aLink.href = blob;
+        aLink.download = 'test.xlsx'; // HTML5新增的属性，指定保存文件名，可以不要后缀，注意，file:///模式下不会生效
+        let event;
+        if (window.MouseEvent) {
+            event = new MouseEvent('click');
+        } else {
+            event = document.createEvent('MouseEvents');
+            event.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+        }
+        aLink.dispatchEvent(event);
+    }
+
+
+    // ---------------------------------------------------------------------------------
+    // 以下不重要
+
+    // 页面测试展示使用 - 创建页面表格
+    function createTableElement(data) {
+        var tableBodyHtml = "<tr><td colspan='" + data.body.excelData[0].length + "' style='text-align: center;font-size:22px;font-family: Arial;font-weight: bold;height: 40px;'>" + data.body.title + "</td></tr>";
+        // 生成Element
+        data.body.excelData.forEach(function (val, index) {
+            var trBodyHtml = '<tr height="20" style="text-align: center;font-size:12px">';
+            val.forEach(function (value) {
+                // 第一行小标题
+                if (0 === index) {
+                    trBodyHtml += '<td style="font-weight: bold;background-color:#808080;color:#ffffff">';
+                    trBodyHtml += '<div title="' + value + '" style="width: 125px;height: 16px;text-overflow: ellipsis;white-space: nowrap;overflow: hidden;">' + value + '</div>';
+                    trBodyHtml += '</td>';
+                } else {
+                    trBodyHtml += '<td style="">';
+                    trBodyHtml += '<div title="' + value + '" style="width: 125px;height: 16px;text-overflow: ellipsis;white-space: nowrap;overflow: hidden;">' + value + '</div>';
+                    trBodyHtml += '</td>';
+                }
+            });
+            trBodyHtml += '</tr>';
+            tableBodyHtml += trBodyHtml;
+        });
+        document.querySelector('#print-content').innerHTML = tableBodyHtml;
+    }
+
+    createTableElement(data);
+</script>
+</body>
+
+</html>

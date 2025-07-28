@@ -1,0 +1,116 @@
+<!--
+ * @Author: bajins
+ * @Date: 2021-12-14 19:46:31
+ * @LastEditTime: 2021-12-14 20:05:45
+ * @LastEditors: bajins
+ * @Description: jQuery多列下拉表框
+ * @FilePath: \fake-select\index.html
+-->
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>jQuery多列下拉列表框</title>
+    <link rel="stylesheet" type="text/css" href="fakeSelect.css">
+    <style type="text/css">
+        body {
+            background: aliceblue;
+        }
+
+        input {
+            border-radius: 4px;
+        }
+
+        .content {
+            padding-left: 100px;
+            position: relative;
+            top: 150px;
+            line-height: 25px;
+
+        }
+    </style>
+</head>
+
+<body>
+<div class="content">
+    <span>多列下拉</span><br>
+    <input id="testDemo">
+    <div class="fakeSelect-content" style="width: 700px; left: 108px; display: none;">
+        <div class="fakeSelect-title">
+            <div class="fakeSelect-title-item title-0-name" style="width: 150px; text-align: center;">姓名</div>
+            <div class="fakeSelect-title-item title-1-jp" style="width: 80px; text-align: center;">简拼</div>
+            <div class="fakeSelect-title-item title-2-phone" style="width: 100px; text-align: center;">电话</div>
+            <div class="fakeSelect-title-item title-3-certificates" style="width: 150px; text-align: center;">证件
+            </div>
+            <div class="fakeSelect-title-item title-4-company" style="width: 200px; text-align: center;">单位</div>
+        </div>
+        <div class="fakeSelect-table">
+            <div class="itemClass">
+                <div class="fakeSelect-item-Con column-15-0-name" name="name"
+                     style="width: 150px; text-align: center;">周渝
+                </div>
+                <div class="fakeSelect-item-Con column-15-1-jp" name="jp" style="width: 80px; text-align: center;">
+                    WL
+                </div>
+                <div class="fakeSelect-item-Con column-15-2-phone" name="phone"
+                     style="width: 100px; text-align: center;">19902212345
+                </div>
+                <div class="fakeSelect-item-Con column-15-3-certificates" name="certificates"
+                     style="width: 150px; text-align: center;">驾驶证
+                </div>
+                <div class="fakeSelect-item-Con column-15-4-company" name="company"
+                     style="width: 200px; text-align: center;">正大企业
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://s1.pstatp.com/cdn/expire-1-M/jquery/1.10.2/jquery.min.js"></script>
+<script src="fakeSelect-min.js"></script>
+
+<script type="text/javascript">
+    $(function () {
+        const fakeSelect = $('#testDemo').fakeSelect({
+            columns: [
+                {title: '姓名', field: 'name', width: 150, align: 'center'},
+                {title: '简拼', field: 'jp', width: 80, align: 'center'},
+                {title: '电话', field: 'phone', width: 100, align: 'center'},
+                {title: '证件', field: 'certificates', width: 150, align: 'center'},
+                {title: '单位', field: 'company', width: 200, align: 'center'}
+            ],
+            data: [
+                {name: '吴昂', jp: 'WL', phone: '19902212345', certificates: '驾驶证', company: '正大企业'},
+                {name: '汉三', jp: 'HS', phone: '19902212555', certificates: '厨师证', company: '正大企业'},
+                {name: '吴磊', jp: 'WL', phone: '19902214445', certificates: '驾驶证', company: '正大企业'},
+                {name: '周五', jp: 'ZW', phone: '19902214345', certificates: '驾驶证', company: '正大企业'},
+                {name: '李四', jp: 'LS', phone: '19902212345', certificates: '驾驶证', company: '正大企业'},
+                {name: '王柳', jp: 'WL', phone: '19902212345', certificates: '驾驶证', company: '正大企业'},
+                {name: '周渝', jp: 'WL', phone: '19902212345', certificates: '驾驶证', company: '正大企业'},
+                {name: '张飒', jp: 'HS', phone: '19902212555', certificates: '厨师证', company: '正大企业'},
+                {name: '离我', jp: 'WL', phone: '19902214445', certificates: '驾驶证', company: '正大企业'},
+                {name: '小明', jp: 'ZW', phone: '19902214345', certificates: '驾驶证', company: '正大企业'},
+                {name: '小花', jp: 'LS', phone: '19902212345', certificates: '驾驶证', company: '正大企业'}
+            ],
+            // url : "",
+            // queryParams:{},
+            valueId: 'name',
+            onClickRow: function (index, rowData) {
+                console.log('onClickRow=:>')
+                console.log(index)
+                console.log(rowData)
+            }
+        });
+        fakeSelect.setRowData({name: 'A', jp: 'B', phone: 'C', certificates: 'D', company: 'E'});
+        fakeSelect.setRowData([{name: 'A1', jp: 'B2', phone: 'C3', certificates: 'D4', company: 'E5'}, {
+            name: 'A2',
+            jp: 'B2-1',
+            phone: 'C3-1',
+            certificates: 'D4-2',
+            company: 'E5-2'
+        }]);
+    })
+</script>
+</body>
+
+</html>

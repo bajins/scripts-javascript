@@ -1,0 +1,487 @@
+<!--
+ * @Author: https://www.bajins.com
+ * @Date: 2021-06-23 10:59:22
+ * @LastEditTime: 2021-10-23 13:47:33
+ * @LastEditors: Please set LastEditors
+ * @Description: In User Settings Edit
+ * @FilePath: print.html
+ *
+ * https://ask.dcloud.net.cn/article/643
+ *
+ * js调用webbluetooth接口 https://blog.csdn.net/qq_44628595/article/details/117028837
+ * https://github.com/BluetoothRocks
+ * https://segmentfault.com/a/1190000018224699
+ * https://bluetooth.rocks/tweets
+ * https://github.com/GoogleChrome/web.dev/blob/main/src/site/content/en/blog/bluetooth/index.md
+ * https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API
+ * ESC/POS指令 https://www.jianshu.com/p/dd6ca0054298
+ * 
+-->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+
+    <title></title>
+</head>
+
+<body>
+
+<p><input id="bt1" type="button" value="搜索设备" onclick="searchDevices('a')"></p>
+
+</button>
+
+</div>
+
+<div>
+    未配对蓝牙设备
+    <ul id="list1">
+
+    </ul>
+</div>
+
+<div>
+    已配对蓝牙设备
+
+    <ul id="list2">
+
+    </ul>
+</div>
+<script type="application/javascript">
+    document.getElementById("bt1").addEventListener('pointerup', function (event) {
+        // Call navigator.bluetooth.requestDevice
+        navigator.bluetooth.requestDevice({filters: [{services: ['battery_service']}]}).then(device => {
+            console.dir(navigator.bluetooth);
+        }).catch(error => {
+            console.error(error);
+        });
+    });
+
+    //address=""搜索蓝牙//address=设备mac地址，自动配对给出mac地址的设备
+    function searchDevices(address) {
+        console.info(window.plus);
+        //注册类
+        var main = plus.android.runtimeMainActivity();
+        var IntentFilter = plus.android.importClass('android.content.IntentFilter');
+        var BluetoothAdapter = plus.android.importClass("android.bluetooth.BluetoothAdapter");
+        var BluetoothDevice = plus.android.importClass("android.bluetooth.BluetoothDevice");
+        var BAdapter = BluetoothAdapter.getDefaultAdapter();
+        console.log("开始搜索设备");
+        var filter = new IntentFilter();
+        var bdevice = new BluetoothDevice();
+        var on = null;
+        var un = null;
+        var vlist1 = document.getElementById('list1'); //注册容器用来显示未配对设备
+        vlist1.innerHTML = ''; //清空容器
+        var vlist2 = document.getElementById('list2'); //注册容器用来显示未配对设备
+        vlist2.innerHTML = ''; //清空容器
+        var button1 = document.getElementById('bt1');
+        button1.disabled = true;
+        button1.value = '正在搜索请稍候';
+        BAdapter.startDiscovery(); //开启搜索
+        var receiver;
+        receiver = plus.android.implements('io.dcloud.android.content.BroadcastReceiver', {
+            onReceive: function (context, intent) { //实现onReceiver回调函数
+                plus.android.importClass(intent); //通过intent实例引入intent类，方便以后的‘.’操作
+                console.log(intent.getAction()); //获取action
+                if (intent.getAction() == "android.bluetooth.adapter.action.DISCOVERY_FINISHED") {
+                    main.unregisterReceiver(receiver); //取消监听
+                    button1.disabled = false;
+                    button1.value = '搜索设备';
+                    console.log("搜索结束")
+                } else {
+                    BleDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                    //判断是否配对
+                    if (BleDevice.getBondState() == bdevice.BOND_NONE) {
+                        console.log("未配对蓝牙设备：" + BleDevice.getName() + '    ' + BleDevice.getAddress());
+                        //参数如果跟取得的mac地址一样就配对
+                        if (address == BleDevice.getAddress()) {
+                            if (BleDevice.createBond()) { //配对命令.createBond()
+                                console.log("配对成功");
+                                var li2 = document.createElement('li'); //注册
+                                li2.setAttribute('id', BleDevice.getAddress()); //打印机mac地址
+                                li2.setAttribute('onclick', 'printIndex(id)'); //注册click点击列表进行打印
+                                li2.innerText = BleDevice.getName();
+                                vlist2.appendChild(li2);
+                            }
+
+                        } else {
+                            if (BleDevice.getName() != on) { //判断防止重复添加
+                                var li1 = document.createElement('li'); //注册
+                                li1.setAttribute('id', BleDevice.getAddress()); //打印机mac地址
+                                li1.setAttribute('onclick', 'searchDevices(id)'); //注册click点击列表进行配对
+                                on = BleDevice.getName();
+                                li1.innerText = on;
+                                vlist1.appendChild(li1);
+
+                            }
+
+                        }
+                    } else {
+                        if (BleDevice.getName() != un) { //判断防止重复添加
+                            console.log("已配对蓝牙设备：" + BleDevice.getName() + '    ' + BleDevice.getAddress());
+                            var li2 = document.createElement('li'); //注册
+                            li2.setAttribute('id', BleDevice.getAddress()); //打印机mac地址
+
+                            li2.setAttribute('onclick', 'printIndex(id)'); //注册click点击列表进行打印
+                            un = BleDevice.getName();
+                            li2.innerText = un;
+                            vlist2.appendChild(li2);
+                        }
+                    }
+                }
+
+            }
+        });
+
+        filter.addAction(bdevice.ACTION_FOUND);
+        filter.addAction(BAdapter.ACTION_DISCOVERY_STARTED);
+        filter.addAction(BAdapter.ACTION_DISCOVERY_FINISHED);
+        filter.addAction(BAdapter.ACTION_STATE_CHANGED);
+
+        main.registerReceiver(receiver, filter); //注册监听
+    }
+
+    var device = null,
+        BAdapter = null,
+        BluetoothAdapter = null,
+        uuid = null,
+        main = null,
+        bluetoothSocket = null;
+
+    function printIndex(molList) {
+        var total = 1;
+        var btnArray = ['确定', '取消'];
+        mui.prompt('请输入打印数量...', total, '', btnArray, function (e) {
+            if (e.index == 0) {
+                total = parseFloat(e.value);
+                if (total == 0) {
+                    alert("请输入大于0的数量!");
+                    return false;
+                } else {
+                    print(molList, total);
+                }
+            } else {
+                mui.toast("已取消");
+            }
+        });
+    }
+
+    /**
+     * 连接蓝牙打印
+     */
+    function print(molList, total) {
+        g.showWaiting("标签打印中,请稍等...");
+        var mac_address = localStorage.getItem("macaddress");
+        if (!mac_address) {
+            mui.toast('请选择蓝牙打印机');
+            return;
+        }
+        localStorage.setItem("macaddress", mac_address);
+        //alert(localStorage.getItem("macaddress"));
+        main = plus.android.runtimeMainActivity();
+        BluetoothAdapter = plus.android.importClass("android.bluetooth.BluetoothAdapter");
+        UUID = plus.android.importClass("java.util.UUID");
+        uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+        BAdapter = BluetoothAdapter.getDefaultAdapter();
+        device = BAdapter.getRemoteDevice(mac_address);
+        plus.android.importClass(device);
+        bluetoothSocket = device.createInsecureRfcommSocketToServiceRecord(uuid);
+        plus.android.importClass(bluetoothSocket);
+
+        if (!bluetoothSocket.isConnected()) {
+            console.log('检测到设备未连接，尝试连接....');
+            bluetoothSocket.connect();
+        }
+
+        console.log('设备已连接');
+
+        if (bluetoothSocket.isConnected()) {
+            //    alert(bluetoothSocket.isConnected());
+            var outputStream = bluetoothSocket.getOutputStream();
+            plus.android.importClass(outputStream);
+
+            var wlbm = molList.MATERIAL_CODE.slice(-10);
+            var wlms = molList.MATERIAL_DESCRIPTION;
+            var ddh = molList.ORDER_NUMBER;
+            var sl = molList.CHECK_SUM;
+            var dw = molList.SALES_UNIT;
+
+            var string = "^XA^MNW^JUS^CI28" +
+                "^FO15,25" +
+                "^MD" +
+                "^A@N,20,20,E:HANS.TTF" +
+                //"^A@N,20,20,E:SIMSUN.TTF" +
+                "^FD" + wlbm + "^FS" +
+                "^FO15,55" +
+                "^A@N,20,20,E:HANS.TTF" +
+                "^FD名称:" + wlms + "^FS" +
+                "^FO15,85" +
+                "^A@N,20,20,E:HANS.TTF" +
+                "^FD订单号:" + ddh + "^FS" +
+                "^FO15,115" +
+                "^A@N,20,20,E:HANS.TTF" +
+                "^FD到货日期:" + app.PSTNG_DATE + "        数量:" + sl + "^FS" +
+                "^FO15,145" +
+                "^A@N,20,20,E:HANS.TTF" +
+                "^FD工厂:5020                                单位:" + dw + "^FS" +
+                "^FO55,175^BY1.8" +
+                "^BCN,50,Y,N,N" +
+                "^FD" + wlbm + "^FS" +
+                "^PQ" + total + ",2,1,Y" +
+                "^XZ";
+
+            var bytes = plus.android.invoke(string, 'getBytes', 'UTF-8');
+            outputStream.write(bytes);
+
+            /*
+            // outputStream.write([0x1B,0x0E]); // 设置打印字符以正常宽度的2倍打印。
+            // outputStream.write([0x1B,0x14]); // 取消字符倍宽打印。
+
+            outputStream.write([0x1B, 0x57, 0x02]); // 设置字符倍宽倍高打印
+            outputStream.write([0x1B, 0x61, 0x01]); // 设置字符倍宽倍高打印
+            outputStream.write(plus.android.invoke("\n七天在线\n", 'getBytes', 'gbk')); //bytes
+            outputStream.write([0x1B, 0x57, 0x01]); // 设置字符倍宽倍高打印
+
+            outputStream.write([0x1B, 0x61, 0x00]); // 选择对齐方式左对齐
+            outputStream.write(plus.android.invoke("\n结账单号：123456789\n", 'getBytes', 'gbk')); //bytes
+            outputStream.write(plus.android.invoke("\n账单金额：100元\n", 'getBytes', 'gbk')); //bytes
+            outputStream.write(plus.android.invoke("\n支付方式：支付宝\n", 'getBytes', 'gbk')); //bytes
+            outputStream.write(plus.android.invoke("\n结账时间：2019年6月3日13:52:18\n", 'getBytes', 'gbk')); //bytes
+            outputStream.write(plus.android.invoke("\n交易单号：8888888888\n\n\n\n\n\n\n", 'getBytes', 'gbk')); //bytes
+
+            outputStream.write([0x1F, 0x11, 0x00, 0x16, 0x68, 0x74, 0x74, 0x70, 0x73, 0x3a, 0x2f, 0x2f, 0x77, 0x77, 0x77, 0x2e,
+                0x62, 0x61, 0x69, 0x64, 0x75, 0x2e, 0x63, 0x6f, 0x6d, 0x2f
+            ]); // 打印二维码
+            */
+
+            outputStream.flush();
+            g.closeWaiting();
+
+            device = null //这里关键
+            bluetoothSocket.close(); //必须关闭蓝牙连接否则意外断开的话打印错误
+        }
+    }
+</script>
+
+<script type="application/javascript">
+    // connect3('123123', '192.168.0.122', 80);
+    /**
+     * 连接wifi 打印机
+     */
+    function connect3(str, ip, port) {
+        if (plus.os.name == "Android") {
+            var Socket = plus.android.importClass("java.net.Socket");
+            var PrintWriter = plus.android.importClass("java.io.PrintWriter");
+            var BufferedWriter = plus.android.importClass("java.io.BufferedWriter");
+            var OutputStreamWriter = plus.android.importClass("java.io.OutputStreamWriter");
+            var BufferedReader = plus.android.importClass("java.io.BufferedReader");
+            var InputStreamReader = plus.android.importClass("java.io.InputStreamReader");
+            //测试改良
+            var StrictMode = plus.android.importClass("android.os.StrictMode");
+            var Build = plus.android.importClass("android.os.Build");
+            if (Build.VERSION.SDK_INT > 9) {
+                var policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+                StrictMode.setThreadPolicy(policy);
+            }
+            var socket = new Socket(ip, port);
+
+            var outputStreamWriter = new OutputStreamWriter(socket.getOutputStream());
+            var bufferWriter = new BufferedWriter(outputStreamWriter);
+            var out = new PrintWriter(bufferWriter, true);
+            out.println(str);
+
+            var inputStreamReader = new InputStreamReader(socket.getInputStream());
+            var br = new BufferedReader(inputStreamReader);
+            var msg = br.readLine();
+
+            //while(true) {
+            if (msg != null) {
+                console.log(msg);
+            }
+            //msg = br.readLine();
+            // }
+        }
+        //console.log(mac);
+        alert("Done");
+    }
+</script>
+<script type="application/javascript">
+    // https://ruizer.github.io/2019/07/23/window-print-%E6%B5%8F%E8%A7%88%E5%99%A8%E6%89%93%E5%8D%B0%E5%85%A8%E9%9B%86
+    /** 给打印增加默认样式 */
+    function myStyle(mode) {
+        mode = mode.toLowerCase();
+        mode = mode === 'landscape' ? mode : 'portrait';
+        const style = document.createElement('style');
+        style.type = 'text/css';
+        style.innerHTML = `@page { size: ${mode}; margin: 10mm;}`;
+        return style;
+    }
+
+    /** @description 动态打印 */
+    export const printPartial = (dom, {title = document.title, mode = 'portrait'} = {},) => {
+        if (!(dom && dom.outerHTML)) return;
+        let copyDom = document.createElement('span');
+        const styleDom = document.querySelectorAll('style, link, meta');
+        const titleDom = document.createElement('title');
+        titleDom.innerText = title;
+        copyDom.appendChild(titleDom);
+        Array.from(styleDom).forEach(item => {
+            copyDom.appendChild(item.cloneNode(true));
+        });
+        copyDom.appendChild(myStyle(mode));
+        const headTemp = copyDom.innerHTML;
+        copyDom = null;
+        const iframeDom = document.createElement('iframe');
+        const attrObj = {
+            height: 0,
+            width: 0,
+            border: 0,
+            wmode: 'Opaque',
+        };
+        const styleObj = {
+            position: 'absolute',
+            top: '-999px',
+            left: '-999px',
+        };
+        Object.entries(attrObj).forEach(([key, value]) => {
+            iframeDom.setAttribute(key, value);
+        });
+        Object.entries(styleObj).forEach(([key, value]) => {
+            iframeDom.style[key] = value;
+        });
+
+        iframeDom.srcdoc = `<html><head>${headTemp}</head></head><body style="-webkit-print-color-adjust: exact;">${dom.outerHTML}</body></html>`;
+
+        document.body.insertBefore(iframeDom, document.body.children[0]);
+        const iframeWin = iframeDom.contentWindow;
+        iframeDom.onload = () => {
+            iframeWin.focus();
+            iframeWin.print();
+            document.body.removeChild(iframeDom);
+        };
+    };
+</script>
+<script type="application/javascript">
+    // https://developer.mozilla.org/zh-CN/docs/Web/API/Window/beforeprint_event
+    function beforePrint() {// 打印前事件
+        console.log('Before Print');
+    }
+
+    function afterPrint() {// 打印后事件
+        console.log('After Print');
+    }
+
+    if (window.matchMedia) {
+        var mediaQueryList = window.matchMedia('print');
+        mediaQueryList.addListener(function (mql) {
+            (mql.matches) ? beforePrint() : afterPrint();
+        });
+    } else {
+        // basically a fallback for < IE11
+        window.addEventListener('beforeprint', beforePrint, false);
+        window.addEventListener('afterprint', afterPrint, false);
+    }
+
+    window.onbeforeprint = function () {// 打印前事件
+        console.log('Before Print');
+    };
+
+    window.onafterprint = function () {// 打印后事件
+        console.log('After Print');
+    };
+    var oldstr = document.body.innerHTML;
+    var headstr = "<html><head><title></title></head><body>";
+    var footstr = "</body></html>";
+    // 执行隐藏打印区域不需要打印的内容
+    document.getElementById("otherpho").style.display = "none";
+    var printData = document.getElementById("studentPhoTable").innerHTML; //获得 div 里的所有 html 数据
+    /*
+    方式一：在浏览器新窗口渲染打印的内容，调用打印
+    */
+    var wind = window.open("", "newwin", "toolbar=no,scrollbars=yes,menubar=no,location=no,resizable=yes,status=no"); // 打开新的浏览器弹窗
+    wind.document.body.innerHTML = headstr + printData + footstr;
+    wind.print();
+    wind.close(); // 关闭浏览器弹窗
+
+    /*
+    方式二：隐藏打印内容，调用打印
+    */
+    document.body.innerHTML = headstr + printData + footstr;
+    window.print();
+
+    //打印结束后，放开隐藏内容
+    document.getElementById("otherpho").style.display = "block";
+    document.body.innerHTML = oldstr;
+
+    /**
+     * 方式三：在页面创建一个iframe渲染打印内容，调用打印
+     */
+    function doPrint3() {
+        // 判断iframe是否存在，不存在则创建iframe
+        var iframe = document.getElementById("print-iframe");
+        if (!iframe) {
+            var el = document.getElementById("printcontent");
+            iframe = document.createElement('iframe');
+            iframe.setAttribute("id", "print-iframe");
+            iframe.setAttribute('style',
+                'position:absolute;width:0px;height:0px;visibility:\'hidden\';left:-500px;top:-500px;');
+            document.body.appendChild(iframe);
+        }
+        const iframeWin = iframe.contentWindow;
+        const doc = iframeWin.document;
+        // 自定义样式
+        //doc.write("<LINK rel="stylesheet" type="text/css" href="css/print.css">");
+        doc.write("<title>我是title头部信息</title>");
+        doc.write('<div>' + el.innerHTML + '</div>');
+        doc.close();
+        iframe.onload = function () { // 每次iframe设置src之后都会执行这部分代码
+            iframeWin.focus();
+            iframeWin.print();
+            document.body.removeChild(iframe);
+            // iframe.parentNode.removeChild(iframe);
+        }
+    }
+
+
+    /**
+     * electron中打印pdf
+     */
+    /*const reader = new FileReader()
+    // blobUrl： 一个blob流
+    reader.readAsDataURL(blobUrl)
+    reader.addEventListener('loadend', () => {
+        nodeApi.sendnew('printResponsePdf', {
+            buffer: Buffer.from(
+                reader.result.split('base64,')[1],
+                'base64'
+            ),
+        })
+    });*/
+
+    // base64转blob的方式
+    /*base64ToBlob() {
+        let imgSrc = this.imgUrl // imgUrl为base64格式的路径
+
+        let arr = imgSrc.split(',')
+        let array = arr[0].match(/:(.*?);/)
+        let mime = (array && array.length > 1 ? array[1] : type) || type
+        // 去掉url的头，并转化为byte
+        let bytes = window.atob(arr[1])
+        // 处理异常,将ascii码小于0的转换为大于0
+        let ab = new ArrayBuffer(bytes.length)
+        // 生成视图（直接针对内存）：8位无符号整数，长度1个字节
+        let ia = new Uint8Array(ab)
+        for (let i = 0; i < bytes.length; i++) {
+            ia[i] = bytes.charCodeAt(i)
+        }
+        return new Blob([ab], {
+            type: mime,
+        })
+    },*/
+
+</script>
+</body>
+
+</html>
